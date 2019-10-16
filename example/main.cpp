@@ -1,5 +1,6 @@
 ﻿#include <stdio.h>
 #include <string>
+#include <memory>
 #include "id_worker.h"
 
 int main() {
