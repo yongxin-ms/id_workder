@@ -19,182 +19,182 @@
  * SnowFlake的优点: 整体上按照时间自增排序, 并且整个分布式系统内不会产生ID碰撞(由数据中心ID和机器ID作区分), 并且效率较高, 经测试, SnowFlake每秒能够产生26万ID左右.
  */
 
-class IdWorker {
+namespace id_worker {
+	class IdWorker {
 
-public:
-	using UInt = unsigned int;
-	using UInt64 = unsigned long long int;
+	public:
+		using UInt = unsigned int;
+		using UInt64 = unsigned long long int;
 
 #ifdef SNOWFLAKE_ID_WORKER_NO_LOCK
-	using AtomicUInt = std::atomic<UInt>;
-	using AtomicUInt64 = std::atomic<UInt64>;
+		using AtomicUInt = std::atomic<UInt>;
+		using AtomicUInt64 = std::atomic<UInt64>;
 #else
-	using AtomicUInt = UInt;
-	using AtomicUInt64 = UInt64;
+		using AtomicUInt = UInt;
+		using AtomicUInt64 = UInt64;
 #endif
 
-	IdWorker() : workerId(0), datacenterId(0), sequence(0), lastTimestamp(0) { }
+		IdWorker() : workerId(0), datacenterId(0), sequence(0), lastTimestamp(0) { }
 
-	virtual json Dump() { return nullptr; };
+		void setWorkerId(UInt workerId) {
+			this->workerId = workerId;
+		}
 
-	void setWorkerId(UInt workerId) {
-		this->workerId = workerId;
-	}
+		void setDatacenterId(UInt datacenterId) {
+			this->datacenterId = datacenterId;
+		}
 
-	void setDatacenterId(UInt datacenterId) {
-		this->datacenterId = datacenterId;
-	}
+		UInt64 getId() {
+			return nextId();
+		}
 
-	UInt64 getId() {
-		return nextId();
-	}
-
-	/**
-	 * 获得下一个ID (该方法是线程安全的)
-	 *
-	 * @return SnowflakeId
-	 */
-	UInt64 nextId() {
+		/**
+		 * 获得下一个ID (该方法是线程安全的)
+		 *
+		 * @return SnowflakeId
+		 */
+		UInt64 nextId() {
 #ifndef SNOWFLAKE_ID_WORKER_NO_LOCK
-		std::unique_lock<std::mutex> lock{ mutex };
-		AtomicUInt64 timestamp{ 0 };
+			std::unique_lock<std::mutex> lock{ mutex };
+			AtomicUInt64 timestamp{ 0 };
 #else
-		static AtomicUInt64 timestamp{ 0 };
+			static AtomicUInt64 timestamp{ 0 };
 #endif
-		timestamp = timeGen();
-
-		// 如果当前时间小于上一次ID生成的时间戳，说明系统时钟回退过这个时候应当抛出异常
-		if (timestamp < lastTimestamp) {
-			std::ostringstream s;
-			s << "clock moved backwards.  Refusing to generate id for " << lastTimestamp - timestamp << " milliseconds";
-			throw std::exception(std::runtime_error(s.str()));
-		}
-
-		if (lastTimestamp == timestamp) {
-			// 如果是同一时间生成的，则进行毫秒内序列
-			sequence = (sequence + 1) & sequenceMask;
-			if (0 == sequence) {
-				// 毫秒内序列溢出, 阻塞到下一个毫秒,获得新的时间戳
-				timestamp = tilNextMillis(lastTimestamp);
-			}
-		}
-		else {
-			sequence = 0;
-		}
-
-#ifndef SNOWFLAKE_ID_WORKER_NO_LOCK
-		lastTimestamp = timestamp;
-#else
-		lastTimestamp = timestamp.load();
-#endif
-
-		// 移位并通过或运算拼到一起组成64位的ID
-		return ((timestamp - twepoch) << timestampLeftShift)
-			| (datacenterId << datacenterIdShift)
-			| (workerId << workerIdShift)
-			| sequence;
-	}
-
-protected:
-
-	/**
-	 * 返回以毫秒为单位的当前时间
-	 *
-	 * @return 当前时间(毫秒)
-	 */
-	UInt64 timeGen() const {
-		auto t = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now());
-		return t.time_since_epoch().count();
-	}
-
-	/**
-	 * 阻塞到下一个毫秒，直到获得新的时间戳
-	 *
-	 * @param lastTimestamp 上次生成ID的时间截
-	 * @return 当前时间戳
-	 */
-	UInt64 tilNextMillis(UInt64 lastTimestamp) const {
-		UInt64 timestamp = timeGen();
-		while (timestamp <= lastTimestamp) {
 			timestamp = timeGen();
-		}
-		return timestamp;
-	}
 
-private:
+			// 如果当前时间小于上一次ID生成的时间戳，说明系统时钟回退过这个时候应当抛出异常
+			if (timestamp < lastTimestamp) {
+				std::ostringstream s;
+				s << "clock moved backwards.  Refusing to generate id for " << lastTimestamp - timestamp << " milliseconds";
+				throw std::exception(std::runtime_error(s.str()));
+			}
+
+			if (lastTimestamp == timestamp) {
+				// 如果是同一时间生成的，则进行毫秒内序列
+				sequence = (sequence + 1) & sequenceMask;
+				if (0 == sequence) {
+					// 毫秒内序列溢出, 阻塞到下一个毫秒,获得新的时间戳
+					timestamp = tilNextMillis(lastTimestamp);
+				}
+			}
+			else {
+				sequence = 0;
+			}
 
 #ifndef SNOWFLAKE_ID_WORKER_NO_LOCK
-	std::mutex mutex;
+			lastTimestamp = timestamp;
+#else
+			lastTimestamp = timestamp.load();
 #endif
 
-	/**
-	 * 开始时间截 (2018-01-01 00:00:00.000)
-	 */
-	const UInt64 twepoch = 1514736000000;
+			// 移位并通过或运算拼到一起组成64位的ID
+			return ((timestamp - twepoch) << timestampLeftShift)
+				| (datacenterId << datacenterIdShift)
+				| (workerId << workerIdShift)
+				| sequence;
+		}
 
-	/**
-	 * 机器id所占的位数
-	 */
-	const UInt workerIdBits = 5;
+	protected:
 
-	/**
-	 * 数据中心id所占的位数
-	 */
-	const UInt datacenterIdBits = 5;
+		/**
+		 * 返回以毫秒为单位的当前时间
+		 *
+		 * @return 当前时间(毫秒)
+		 */
+		UInt64 timeGen() const {
+			auto t = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now());
+			return t.time_since_epoch().count();
+		}
 
-	/**
-	 * 序列所占的位数
-	 */
-	const UInt sequenceBits = 12;
+		/**
+		 * 阻塞到下一个毫秒，直到获得新的时间戳
+		 *
+		 * @param lastTimestamp 上次生成ID的时间截
+		 * @return 当前时间戳
+		 */
+		UInt64 tilNextMillis(UInt64 lastTimestamp) const {
+			UInt64 timestamp = timeGen();
+			while (timestamp <= lastTimestamp) {
+				timestamp = timeGen();
+			}
+			return timestamp;
+		}
 
-	/**
-	 * 机器ID向左移12位
-	 */
-	const UInt workerIdShift = sequenceBits;
+	private:
 
-	/**
-	 * 数据标识id向左移17位
-	 */
-	const UInt datacenterIdShift = workerIdShift + workerIdBits;
+#ifndef SNOWFLAKE_ID_WORKER_NO_LOCK
+		std::mutex mutex;
+#endif
 
-	/**
-	 * 时间截向左移22位
-	 */
-	const UInt timestampLeftShift = datacenterIdShift + datacenterIdBits;
+		/**
+		 * 开始时间截 (2018-01-01 00:00:00.000)
+		 */
+		const UInt64 twepoch = 1514736000000;
 
-	/**
-	 * 支持的最大机器id，结果是31
-	 */
-	const UInt maxWorkerId = -1 ^ (-1 << workerIdBits);
+		/**
+		 * 机器id所占的位数
+		 */
+		const UInt workerIdBits = 5;
 
-	/**
-	 * 支持的最大数据中心id，结果是31
-	 */
-	const UInt maxDatacenterId = -1 ^ (-1 << datacenterIdBits);
+		/**
+		 * 数据中心id所占的位数
+		 */
+		const UInt datacenterIdBits = 5;
 
-	/**
-	 * 生成序列的掩码，这里为4095
-	 */
-	const UInt sequenceMask = -1 ^ (-1 << sequenceBits);
+		/**
+		 * 序列所占的位数
+		 */
+		const UInt sequenceBits = 12;
 
-	/**
-	 * 工作机器id(0~31)
-	 */
-	UInt workerId;
+		/**
+		 * 机器ID向左移12位
+		 */
+		const UInt workerIdShift = sequenceBits;
 
-	/**
-	 * 数据中心id(0~31)
-	 */
-	UInt datacenterId;
+		/**
+		 * 数据标识id向左移17位
+		 */
+		const UInt datacenterIdShift = workerIdShift + workerIdBits;
 
-	/**
-	 * 毫秒内序列(0~4095)
-	 */
-	AtomicUInt sequence{ 0 };
+		/**
+		 * 时间截向左移22位
+		 */
+		const UInt timestampLeftShift = datacenterIdShift + datacenterIdBits;
 
-	/**
-	 * 上次生成ID的时间截
-	 */
-	AtomicUInt64 lastTimestamp{ 0 };
+		/**
+		 * 支持的最大机器id，结果是31
+		 */
+		const UInt maxWorkerId = -1 ^ (-1 << workerIdBits);
 
-};
+		/**
+		 * 支持的最大数据中心id，结果是31
+		 */
+		const UInt maxDatacenterId = -1 ^ (-1 << datacenterIdBits);
+
+		/**
+		 * 生成序列的掩码，这里为4095
+		 */
+		const UInt sequenceMask = -1 ^ (-1 << sequenceBits);
+
+		/**
+		 * 工作机器id(0~31)
+		 */
+		UInt workerId;
+
+		/**
+		 * 数据中心id(0~31)
+		 */
+		UInt datacenterId;
+
+		/**
+		 * 毫秒内序列(0~4095)
+		 */
+		AtomicUInt sequence{ 0 };
+
+		/**
+		 * 上次生成ID的时间截
+		 */
+		AtomicUInt64 lastTimestamp{ 0 };
+
+	};
+}

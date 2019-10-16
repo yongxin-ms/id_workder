@@ -1,22 +1,28 @@
 ﻿#include <stdio.h>
 #include <string>
-#include "base64.h"
+#include "id_worker.h"
 
-int main(int argc, char **argv) {
-	if (argc < 2) {
-		printf("usage: %s 'string'\n", argv[0]);
-		return 1;
+int main() {
+
+	enum ENUM_MSG_TYPE {
+		MSG_TYPE_NONE			= 0,	//未知
+		MSG_TYPE_EVENT			= 1,	//网络事件
+		MSG_TYPE_CLIENT			= 2,	//客户端
+		MSG_TYPE_GATE			= 3,	//网关
+		MSG_TYPE_RANK_SERVER	= 4,	//排行榜服务器
+		MSG_TYPE_CENTER_SERVER	= 5,	//中央服务器
+		MSG_TYPE_BALANCE_SERVER = 6,	//负载均衡服务器
+		MSG_TYPE_COUNT,
+	};
+
+	auto id_worker_ptr = std::make_shared<id_worker::IdWorker>();
+	id_worker_ptr->setDatacenterId(MSG_TYPE_BALANCE_SERVER);
+	id_worker_ptr->setWorkerId(1);
+
+	for (int i = 0; i < 10; i++) {
+		auto session_id = id_worker_ptr->getId();
+		printf("%llu\n", session_id);
 	}
-
-	const std::string msg(argv[1]);
-
-	base64::Base64Encrypt base64enc(msg.data(), msg.size());
-	const std::string encode = base64enc.GetString();
-	printf("encode:[%s]\n", encode.data());
-
-	base64::Base64Decrypt base64dec(encode.data(), encode.size());
-	std::string decode((const char*)base64dec.PlainText(), base64dec.GetSize());
-	printf("decode:[%s]\n", decode.data());
 
 	return 0;
 }
