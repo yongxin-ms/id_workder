@@ -20,18 +20,18 @@ int main() {
 
 	auto id_worker_ptr = std::make_shared<id_worker::IdWorker>(MSG_TYPE_BALANCE_SERVER, 1);
 
-// 	auto tStart = time(nullptr);
-// 	const int TOTAL_COUNT = 40000000;
-// 	for (int i = 0; i < TOTAL_COUNT; i++) {
-// 		id_worker_ptr->CreateId();
-// 	}
-// 
-// 	auto tEnd = time(nullptr);
-// 	if (tEnd - tStart > 0) {
-// 		auto qps = TOTAL_COUNT / (tEnd - tStart);
-// 		printf("qps:%llu\n", qps);
-// 	}
-// 
+ 	auto tStart = time(nullptr);
+ 	const int TOTAL_COUNT = 40000000;
+ 	for (int i = 0; i < TOTAL_COUNT; i++) {
+ 		id_worker_ptr->CreateId();
+ 	}
+ 
+ 	auto tEnd = time(nullptr);
+ 	if (tEnd - tStart > 0) {
+ 		auto qps = TOTAL_COUNT / (tEnd - tStart);
+ 		printf("qps:%ld\n", qps);
+ 	}
+ 
 	std::vector<uint64_t> vRet;
 	for (int i = 0; i < 30; i++) {
 		auto id = id_worker_ptr->CreateId();

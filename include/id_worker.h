@@ -85,13 +85,15 @@ namespace id_worker {
 
 	private:
 
+		struct StId {
+	         uint64_t sequence : 12;
+             uint64_t workerId : 5;
+             uint64_t datacenterId : 5;
+             uint64_t timestamp : 42;
+		};
+
 		union UnionId {
-			struct StId {
-				uint64_t sequence : 12;
-				uint64_t workerId : 5;
-				uint64_t datacenterId : 5;
-				uint64_t timestamp : 42;
-			} stId;
+			StId stId;
 			uint64_t nId;
 		};
 
