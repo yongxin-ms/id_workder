@@ -1,6 +1,7 @@
 ﻿#include <stdio.h>
 #include <string>
 #include <memory>
+#include <vector>
 #include "id_worker.h"
 
 int main() {
@@ -17,12 +18,29 @@ int main() {
 	};
 
 	auto id_worker_ptr = std::make_shared<id_worker::IdWorker>();
-	id_worker_ptr->setDatacenterId(MSG_TYPE_BALANCE_SERVER);
-	id_worker_ptr->setWorkerId(1);
+	id_worker_ptr->SetDatacenterId(MSG_TYPE_BALANCE_SERVER);
+	id_worker_ptr->SetWorkerId(1);
 
-	for (int i = 0; i < 10; i++) {
-		auto session_id = id_worker_ptr->getId();
-		printf("%llu\n", session_id);
+// 	auto tStart = time(nullptr);
+// 	const int TOTAL_COUNT = 40000000;
+// 	for (int i = 0; i < TOTAL_COUNT; i++) {
+// 		id_worker_ptr->CreateId();
+// 	}
+// 
+// 	auto tEnd = time(nullptr);
+// 	if (tEnd - tStart > 0) {
+// 		auto qps = TOTAL_COUNT / (tEnd - tStart);
+// 		printf("qps:%llu\n", qps);
+// 	}
+// 
+	std::vector<uint64_t> vRet;
+	for (int i = 0; i < 30; i++) {
+		auto id = id_worker_ptr->CreateId();
+		//printf("0x%016lx\n", id);
+		vRet.push_back(id);
+
+		if (i == 10)
+			std::this_thread::sleep_for(std::chrono::milliseconds(2));
 	}
 
 	return 0;
