@@ -19,15 +19,9 @@
 namespace id_worker {
 	class IdWorker {
 	public:
-		IdWorker() {
+		IdWorker(uint64_t datacenterId, uint64_t workerId) {
 			id_.nId = 0;
-		}
-
-		void SetWorkerId(uint64_t workerId) {
 			id_.stId.workerId = workerId;
-		}
-
-		void SetDatacenterId(uint64_t datacenterId) {
 			id_.stId.datacenterId = datacenterId;
 		}
 

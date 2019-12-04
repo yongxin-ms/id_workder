@@ -2,6 +2,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <thread>
 #include "id_worker.h"
 
 int main() {
@@ -17,9 +18,7 @@ int main() {
 		MSG_TYPE_COUNT,
 	};
 
-	auto id_worker_ptr = std::make_shared<id_worker::IdWorker>();
-	id_worker_ptr->SetDatacenterId(MSG_TYPE_BALANCE_SERVER);
-	id_worker_ptr->SetWorkerId(1);
+	auto id_worker_ptr = std::make_shared<id_worker::IdWorker>(MSG_TYPE_BALANCE_SERVER, 1);
 
 // 	auto tStart = time(nullptr);
 // 	const int TOTAL_COUNT = 40000000;
@@ -36,7 +35,7 @@ int main() {
 	std::vector<uint64_t> vRet;
 	for (int i = 0; i < 30; i++) {
 		auto id = id_worker_ptr->CreateId();
-		//printf("0x%016lx\n", id);
+		printf("0x%016llx\n", id);
 		vRet.push_back(id);
 
 		if (i == 10)
