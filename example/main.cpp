@@ -19,9 +19,10 @@ int main() {
 	};
 
 	auto id_worker_ptr = std::make_shared<id_worker::IdWorker>(MSG_TYPE_BALANCE_SERVER, 1);
+	//auto id_worker_ptr = std::make_shared<id_worker::IdWorker>(0, 0);
 
  	auto tStart = time(nullptr);
- 	const int TOTAL_COUNT = 40000000;
+ 	const int TOTAL_COUNT = 80000000;
  	for (int i = 0; i < TOTAL_COUNT; i++) {
  		id_worker_ptr->CreateId();
  	}
@@ -39,7 +40,7 @@ int main() {
 		vRet.push_back(id);
 
 		if (i == 10)
-			std::this_thread::sleep_for(std::chrono::milliseconds(2));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	return 0;

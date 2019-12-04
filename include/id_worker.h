@@ -13,34 +13,35 @@
  *           |└---------------------------时间戳--------------------------┘└中心-┘└机器-┘  └----序列号----┘
  *           |
  *         不用
- * SnowFlake的优点: 整体上按照时间自增排序, 并且整个分布式系统内不会产生ID碰撞(由数据中心ID和机器ID作区分), 并且效率较高, 经测试, SnowFlake每秒能够产生26万ID左右.
+ * SnowFlake的优点: 整体上按照时间自增排序, 并且整个分布式系统内不会产生ID碰撞(由数据中心ID和机器ID作区分), 
+ * 并且效率较高, 经测试, SnowFlake每秒能够产生400万左右的Id.
  */
 
 namespace id_worker {
 	class IdWorker {
 	public:
-		IdWorker(uint64_t datacenterId, uint64_t workerId) {
+		IdWorker(uint32_t datacenterId, uint32_t workerId) {
 			id_.nId = 0;
 			id_.stId.workerId = workerId;
 			id_.stId.datacenterId = datacenterId;
 		}
 
 		/**
-		 * 获得下一个ID (该方法是线程安全的)
+		 * 生成一个ID (该方法是线程安全的)
 		 *
 		 * @return SnowflakeId
 		 */
 		uint64_t CreateId() {
 			auto timestamp = GetCurMilliSeconds();
+			std::unique_lock<std::mutex> lock{ mutex_ };
 
 			// 如果当前时间小于上一次ID生成的时间戳，说明系统时钟回退过这个时候应当抛出异常
-			if (timestamp < lastTimestamp_) {
-				std::ostringstream s;
-				s << "clock moved backwards.  Refusing to generate id for " << lastTimestamp_ - timestamp << " milliseconds";
-				throw std::exception(std::runtime_error(s.str()));
-			}
+			//if (timestamp < lastTimestamp_) {
+			//	std::ostringstream s;
+			//	s << "clock moved backwards.  Refusing to generate id for " << lastTimestamp_ - timestamp << " milliseconds";
+			//	throw std::exception(std::runtime_error(s.str()));
+			//}
 
-			std::unique_lock<std::mutex> lock{ mutex_ };
 			if (lastTimestamp_ == timestamp) {
 				// 如果是同一时间生成的，则进行毫秒内序列
 				id_.stId.sequence++;
@@ -57,7 +58,7 @@ namespace id_worker {
 			return id_.nId;
 		}
 
-	protected:
+	private:
 
 		/**
 		 * 返回以毫秒为单位的当前时间
@@ -89,7 +90,8 @@ namespace id_worker {
 	         uint64_t sequence : 12;
              uint64_t workerId : 5;
              uint64_t datacenterId : 5;
-             uint64_t timestamp : 42;
+             uint64_t timestamp : 41;
+			 uint64_t unused : 1;
 		};
 
 		union UnionId {
