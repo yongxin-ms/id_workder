@@ -1,7 +1,5 @@
 ﻿#pragma once
-
 #include <mutex>
-#include <atomic>
 #include <chrono>
 #include <exception>
 #include <sstream>
