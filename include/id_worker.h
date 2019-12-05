@@ -33,12 +33,17 @@ namespace id_worker {
 			auto timestamp = GetCurMilliSeconds();
 			std::unique_lock<std::mutex> lock{ mutex_ };
 
-			// 如果当前时间小于上一次ID生成的时间戳，说明系统时钟回退过这个时候应当抛出异常
-			//if (timestamp < lastTimestamp_) {
-			//	std::ostringstream s;
-			//	s << "clock moved backwards.  Refusing to generate id for " << lastTimestamp_ - timestamp << " milliseconds";
-			//	throw std::exception(std::runtime_error(s.str()));
-			//}
+			// 如果当前时间小于上一次ID生成的时间戳，说明系统时钟回退过
+			if (timestamp < lastTimestamp_) {
+				auto offset = lastTimestamp_ - timestamp;
+				if (offset <= 10) {
+					// 等待两倍时间，让时间追上来
+					std::this_thread::sleep_for(std::chrono::milliseconds(offset * 2));
+					timestamp = GetCurMilliSeconds();
+				} else {
+					id_.stId.timeRollback++;
+				}
+			}
 
 			if (lastTimestamp_ == timestamp) {
 				// 如果是同一时间生成的，则进行毫秒内序列
@@ -85,10 +90,11 @@ namespace id_worker {
 	private:
 
 		struct StId {
-	         uint64_t sequence : 12;
+	         uint64_t sequence : 10;
              uint64_t workerId : 5;
              uint64_t datacenterId : 5;
-             uint64_t timestamp : 41;
+			 uint64_t timeRollback : 5;//时间回拨计数
+             uint64_t timestamp : 38;
 			 uint64_t unused : 1;
 		};
 

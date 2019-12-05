@@ -22,15 +22,15 @@ int main() {
 	//auto id_worker_ptr = std::make_shared<id_worker::IdWorker>(0, 0);
 
  	auto tStart = time(nullptr);
- 	const int TOTAL_COUNT = 80000000;
+ 	const int TOTAL_COUNT = 30000000;
  	for (int i = 0; i < TOTAL_COUNT; i++) {
  		id_worker_ptr->CreateId();
  	}
  
  	auto tEnd = time(nullptr);
  	if (tEnd - tStart > 0) {
- 		auto qps = TOTAL_COUNT / (tEnd - tStart);
- 		printf("qps:%ld\n", qps);
+ 		int64_t qps = TOTAL_COUNT / (tEnd - tStart);
+ 		printf("qps:%lld\n", qps);
  	}
  
 	std::vector<uint64_t> vRet;
