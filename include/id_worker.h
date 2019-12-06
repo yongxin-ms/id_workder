@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include <mutex>
 #include <chrono>
-#include <exception>
 #include <sstream>
 
 /**
@@ -18,10 +17,11 @@
 namespace id_worker {
 	class IdWorker {
 	public:
-		IdWorker(uint32_t datacenterId, uint32_t workerId) {
+		IdWorker(uint32_t datacenterId, uint32_t workerId, std::function<void(const char*)> f) {
 			id_.nId = 0;
 			id_.stId.workerId = workerId;
 			id_.stId.datacenterId = datacenterId;
+			log_func_ = f;
 		}
 
 		/**
@@ -40,8 +40,19 @@ namespace id_worker {
 					// 等待两倍时间，让时间追上来
 					std::this_thread::sleep_for(std::chrono::milliseconds(offset * 2));
 					timestamp = GetCurMilliSeconds();
+					if (log_func_ != nullptr) {
+						std::ostringstream text;
+						text << "[IdWorker] " << "sleep for timer rollback, offset:" << offset << "ms";
+						log_func_(text.str().c_str());
+					}
 				} else {
 					id_.stId.timeRollback++;
+					if (log_func_ != nullptr) {
+						std::ostringstream text;
+						text << "[IdWorker] " << "increase counter for timer rollback, offset:" << offset << "ms"
+							<< ",counter:" << id_.stId.timeRollback;
+						log_func_(text.str().c_str());
+					}
 				}
 			}
 
@@ -108,5 +119,6 @@ namespace id_worker {
 		std::mutex mutex_;
 		int64_t lastTimestamp_ = 0;
 		UnionId id_;
+		std::function<void(const char*)> log_func_ = nullptr;
 	};
 }
