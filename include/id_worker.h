@@ -2,6 +2,7 @@
 #include <mutex>
 #include <chrono>
 #include <sstream>
+#include <functional>
 
 /**
  * @brief 分布式id生成类
