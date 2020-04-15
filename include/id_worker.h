@@ -3,6 +3,7 @@
 #include <chrono>
 #include <sstream>
 #include <functional>
+#include <thread>
 
 /**
  * @brief 分布式id生成类
@@ -12,7 +13,17 @@
  */
 
 namespace id_worker {
-class IdWorker {
+class noncopyable {
+protected:
+	noncopyable() = default;
+	~noncopyable() = default;
+
+private:
+	noncopyable(const noncopyable&) = delete;
+	const noncopyable& operator=(const noncopyable&) = delete;
+};
+
+class IdWorker : public noncopyable {
 public:
 	IdWorker(uint32_t datacenterId, uint32_t workerId, std::function<void(const char*)> f) {
 		id_.nId = 0;
@@ -28,7 +39,7 @@ public:
 	 */
 	uint64_t CreateId() {
 		auto timestamp = GetCurMilliSeconds();
-		std::unique_lock<std::mutex> lock{mutex_};
+		std::lock_guard<std::mutex> lock{mutex_};
 
 		// 如果当前时间小于上一次ID生成的时间戳，说明系统时钟回退过
 		if (timestamp < lastTimestamp_) {
